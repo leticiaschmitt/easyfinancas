@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Easy Finanças - Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container py-5">
+    <h1 class="text-center mb-5 titulo-dashboard">Dashboard</h1>
+
+    <!-- Card de Saldo -->
+    <div class="card mb-4 shadow rounded-4 p-4 text-center">
+      <h2 class="card-title fs-4">Saldo total</h2>
+      <p id="saldo-total" class="fs-1 fw-bold">R$ 0,00</p>
+      <div class="grafico-wrapper">
+        <canvas id="grafico-financas" class="grafico-canvas"></canvas>
+      </div>
+      <button class="btn btn-primary btn-lg mt-4" type="button" data-bs-toggle="collapse" data-bs-target="#detalhes-saldo" aria-expanded="false" aria-controls="detalhes-saldo">
+        Ver detalhes
+      </button>
+      <div class="collapse mt-3" id="detalhes-saldo">
+        <div class="alert alert-info text-start rounded-3">
+          <p><strong>Resumo financeiro:</strong></p>
+          <ul class="list-unstyled">
+            <li><span class="badge bg-entrada">Entradas:</span> <span id="detalhe-entradas">R$ 0,00</span></li>
+            <li><span class="badge bg-purple">Custos:</span> <span id="detalhe-custos">R$ 0,00</span></li>
+            <li><span class="badge bg-info">Despesas:</span> <span id="detalhe-despesas">R$ 0,00</span></li>
+          </ul>
+          <p class="mt-3">🔍 Em breve: relatórios por período e categorias!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Histórico -->
+    <div class="card shadow rounded-4 p-4 mb-5">
+      <h2 class="card-title fs-4 text-center mb-4">Histórico</h2>
+      <ul class="list-group list-group-flush fs-5" id="lista-historico"></ul>
+    </div>
+
+    <!-- Formulário -->
+    <div class="card shadow rounded-4 p-4">
+      <h2 class="card-title fs-4 text-center mb-4">Adicionar movimentação</h2>
+      <form id="form-movimentacao">
+        <div class="mb-3">
+          <label for="tipo" class="form-label">Tipo</label>
+          <select id="tipo" class="form-select" required>
+            <option selected disabled value="">Selecione</option>
+            <option value="entrada">Entrada</option>
+            <option value="custo">Saída - Custo</option>
+            <option value="despesa">Saída - Despesa</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="valor" class="form-label">Valor</label>
+          <input type="text" class="form-control" id="valor" placeholder="Ex: 120,50" required />
+        </div>
+        <button type="submit" class="btn btn-success w-100">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("form-movimentacao");
+    const tipo = document.getElementById("tipo");
+    const valor = document.getElementById("valor");
+    const listaHistorico = document.getElementById("lista-historico");
+    const saldoTotal = document.getElementById("saldo-total");
+
+    let saldoAtual = 0;
+    let totalEntradas = 0;
+    let totalCustos = 0;
+    let totalDespesas = 0;
+
+    const ctx = document.getElementById("grafico-financas").getContext("2d");
+    const grafico = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: ["Entradas", "Custos", "Despesas"],
+        datasets: [{
+          label: "R$",
+          data: [0, 0, 0],
+          backgroundColor: ["#32CD32", "#8A2BE2", "#00BFFF"],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: "bottom"
+          }
+        }
+      }
+    });
+
+    function atualizarGrafico() {
+      grafico.data.datasets[0].data = [totalEntradas, totalCustos, totalDespesas];
+      grafico.update();
+    }
+
+    function atualizarDetalhes() {
+      document.getElementById("detalhe-entradas").textContent = formatarMoeda(totalEntradas);
+      document.getElementById("detalhe-custos").textContent = formatarMoeda(totalCustos);
+      document.getElementById("detalhe-despesas").textContent = formatarMoeda(totalDespesas);
+    }
+
+    function formatarMoeda(valor) {
+      return valor.toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      });
+    }
+
+    function atualizarSaldo() {
+      saldoTotal.textContent = formatarMoeda(saldoAtual);
+      saldoTotal.classList.remove("text-saldo-positivo", "text-saldo-negativo");
+
+      if (saldoAtual >= 0) {
+        saldoTotal.classList.add("text-saldo-positivo");
+      } else {
+        saldoTotal.classList.add("text-saldo-negativo");
+      }
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const tipoMov = tipo.value;
+      const valorBruto = valor.value.replace(",", ".");
+      const valorMov = parseFloat(valorBruto);
+
+      if (!tipoMov || isNaN(valorMov) || valorMov <= 0) {
+        alert("Preencha todos os campos corretamente.");
+        return;
+      }
+
+      let cor, icone;
+      const valorFormatado = valorMov.toFixed(2).replace(".", ",");
+
+      switch (tipoMov) {
+        case "entrada":
+          saldoAtual += valorMov;
+          totalEntradas += valorMov;
+          cor = "#32CD32";
+          icone = "fa-circle-plus";
+          break;
+        case "custo":
+          saldoAtual -= valorMov;
+          totalCustos += valorMov;
+          cor = "#FF0000";
+          icone = "fa-circle-minus";
+          break;
+        case "despesa":
+          saldoAtual -= valorMov;
+          totalDespesas += valorMov;
+          cor = "#FF0000";
+          icone = "fa-circle-minus";
+          break;
+      }
+
+      const item = document.createElement("li");
+      item.classList.add("list-group-item", "d-flex", "justify-content-between");
+      item.innerHTML = `
+        <span style="color: black;">R$ ${valorFormatado}</span>
+        <i class="fa-solid ${icone}" style="color: ${cor}; font-size: 1.25rem;"></i>
+      `;
+
+      listaHistorico.prepend(item);
+      atualizarSaldo();
+      atualizarGrafico();
+      atualizarDetalhes();
+
+      tipo.value = "";
+      valor.value = "";
+    });
+
+    atualizarSaldo();
+    atualizarGrafico();
+    atualizarDetalhes();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
