@@ -90,4 +90,6 @@ Fase 4 – Projeto Fintech
 
 ## Vídeo demonstrativo
 
-![image](https://github.com/user-attachments/assets/40378e95-469b-4d99-9587-87b0c8c9d9da)
+https://github.com/user-attachments/assets/2c529d52-9a84-4f41-9544-baf634de4dd6
+
+
